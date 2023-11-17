@@ -25,7 +25,7 @@ mu = 5
 lbd = 50
 sig = 1
 iters = 1_500 // lbd
-adversary = RandomPlayer() #RandomlyOptimal(0.3)
+adversary = RandomPlayer()  # RandomlyOptimal(0.3)
 logging.getLogger().setLevel(logging.INFO)
 
 

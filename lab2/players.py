@@ -26,14 +26,15 @@ class OptimalPlayer(NimPlayer):
         desired_ns = int(np.sum([c - 1 > 0 for c in state.rows]) <= 1)
         ns = self.nim_sum(state.rows)
         for r, c in enumerate(state.rows):
-            if not c > 0: continue
+            if not c > 0:
+                continue
             residual = self.nim_sum((ns, c))
             if desired_ns == 0:
                 if residual < c:
-                    return Nimply(r, c-residual)
+                    return Nimply(r, c - residual)
             else:
                 if residual == 0 and c > 1:
-                    return Nimply(r, c-1)
+                    return Nimply(r, c - 1)
                 elif residual == 1:
                     return Nimply(r, c)
         return self.random_player(state)
@@ -119,7 +120,9 @@ class TakeAllButOneFromTallest(NimPlayerWithBackup):
         tallest_row = np.argmax(state.rows)
         if not state.rows[tallest_row] > 1:
             return self.backup(state)
-        logging.debug(f"Player: TakeAllButOneFromTallest: tallest_row is {tallest_row}.")
+        logging.debug(
+            f"Player: TakeAllButOneFromTallest: tallest_row is {tallest_row}."
+        )
         return Nimply(tallest_row, min(state.rows[tallest_row] - 1, state.k))
 
 
