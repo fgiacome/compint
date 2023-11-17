@@ -17,13 +17,18 @@ import logging
 from tqdm import tqdm
 from matplotlib import pyplot as plt
 
+# Number of "simple" players (aka strategies)
 NUMBER_PLAYERS = 6
+# Number of booleans in the reduced game state representation
 STATES_DIM = 4
+# Number of games per fitness evalutaion
 NUM_GAMES = 100
+# Number of stacks in the nim games
 NIM_DIM = 5
 mu = 5
 lbd = 50
 sig = 1
+# Number of generations (iterations)
 iters = 1_500 // lbd
 adversary = RandomPlayer()  # RandomlyOptimal(0.3)
 logging.getLogger().setLevel(logging.INFO)
