@@ -37,7 +37,7 @@ for gen in tqdm(range(num_generations)):
         crossover(pa, pb, ca, cb)
         mutate(ca)
         mutate(cb)
-    population[:,:] = offspring[:,:] 
+    population, offspring = offspring, population
 # one last round of comparing "best"
 for i in range(lbd):
     if best_fitness < fitnesses[i]:
