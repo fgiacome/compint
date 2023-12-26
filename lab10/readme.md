@@ -17,10 +17,13 @@ By the argument that playing the opponent is a completely symmetrical problem, t
 
 $$
     s^* = \arg\max_{s' \in S(s)}v_k(s')\\
+$$
+
+$$
     v_{k+1}(s) = \min_{s' \in S(s^*)}v_k(s')
 $$
 
-where, once again, $S(s)$ and $S(s^*)$ are the sets of states reachable in one move from $s$ and $s^*$, respectively.
+where, once again, $S(s)$ reachable in one move from $s$.
 
 In practice, I do not consider the states were it is not the agent's turn in the value function (ie, their value is undefined), and rather perform the first step lookahead as follows:
 
