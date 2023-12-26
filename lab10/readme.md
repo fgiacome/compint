@@ -39,5 +39,9 @@ The algorithm can be run by directly executing the file `main.py`.
 The program will find the optimal value function and then offer to play an interactive game.
 By switchin the flag `start`, one can control who begins the game.
 
-## Acknoledgements
-The idea of using value iteration was taken from applications seen in the course Robot learning, ay 2023/24.
+## Acknowledgements
+The idea of using value iteration was taken from applications seen in the course _Robot learning_, given at Politecnico di Torino in the academic year 2023/24.
+
+As a reference, I used
+
+> R. S. Sutton, A. G. Barto, _Reinforcement learning_, 2nd edition, The MIT Press, 2018.
