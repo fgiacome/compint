@@ -42,7 +42,7 @@ By switchin the flag `start`, one can control who begins the game.
 ## Update (important!)
 The procedure described above is implemented in the commit with tag `lab10-original` (it was my original submission).
 I changed it for two reasons:
-1. The procedure converges to the optimal value function against an optimal player.
+1. The procedure (apparently, see the next point) converges to the optimal value function against an optimal player.
 This makes the procedure blind to the possibility of the opponent being non-optimal: the algorithm considers as equivalent a move which leads to a situation where a win is impossible and a move which leads to a situation where a win is possible provided that the opponent makes a mistake.
 2. To address the previous point, I changed the policy of the second step of the lookahead to choose a random action with small probability, so that the agent would account for the possibility of the opponent making mistakes.
 With this update, I realized an even deeper problem with my original approach: the algorithm does converge (within a small tolerance), but it assigns different values to symmetrical positions, which means that the convergence value is arbitrary (that is, it depends on the initial conditions).
