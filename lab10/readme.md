@@ -40,7 +40,7 @@ The program will find the optimal value function and then offer to play an inter
 By switchin the flag `start`, one can control who begins the game.
 
 ## Update (important!)
-The procedure described above is implemented in the branch `original` (it was my original submission).
+The procedure described above is implemented in the commit with tag `lab10-original` (it was my original submission).
 I changed it for two reasons:
 1. The procedure converges to the optimal value function against an optimal player.
 This makes the procedure blind to the possibility of the opponent being non-optimal: the algorithm considers as equivalent a move which leads to a situation where a win is impossible and a move which leads to a situation where a win is possible provided that the opponent makes a mistake.
