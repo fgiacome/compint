@@ -53,7 +53,7 @@ This is indeed the only significant difference with the vanilla value iteration.
 So, I switched to a simpler model of the opponent: a random player.
 I did not go this way at first because I wanted to try to model a "smart" opponent;
 however, even if the opponent is a random player, the optimal value function is higher for the states where a win is guaranteed compared to the other states, only the difference will be smaller.
-In turn, this means that the convergence tolerance should be set to a higher value. 
+In turn, this means that the convergence tolerance should be set to a smaller value. 
 In practice, though, for such a simple game the convergence is instantaneous in either case.
 Finally, while I did not check this result with any of my classmates, the optimal value function against a random player found by the value iteration algorithm should be the same found by the Monte Carlo algorithm employing episode sampling.
 
