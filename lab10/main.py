@@ -107,26 +107,29 @@ init_sv(state_values, State(frozenset(), frozenset()), (0,0))
 
 # value iteration...
 delta = 1
-# convergence tolerance, not really needed here since we're working with integer values
-epsilon = 0.001
+epsilon = 0.000001
 while delta > epsilon:
     delta = 0
     for state, value in state_values.items():
         # do not update terminal states
         if win(state) != 0 or len(state.free) == 0: continue
+        successors = [State(state.x.union({cell}), state.o) for cell in state.free]
         # 2-step lookahead update
-        # first, consider the worst next state for the opponent (notice the call to `swap`)
-        best_successor = min([State(state.x.union({cell}), state.o).swap() for cell in state.free], key=lambda s: state_values[s])
-        # then, check whether we ended up in a terminal state
-        if win(best_successor) == 0 and len(best_successor.free) != 0:
-            # if not, consider the worst value that the opponent could leave us (again, notice `swap`)
-            next_value = min([state_values[State(best_successor.x.union({cell}), best_successor.o).swap()] for cell in best_successor.free])
-        # else, the opponent can do nothing: we get the value of the state from our point of view (so we have to call `swap` here as well)
-        else: next_value = win(best_successor.swap())
+        # assuming that the other player plays randomly:
+        # the next value is the maximum...
+        next_value = max(
+            [
+                # ...over the average value of the set of children...
+                sum([state_values[State(successor.x, successor.o.union({cell}))] for cell in successor.free])/len(successor.free)
+                if len(successor.free)>0 and win(successor)==0
+                else win(successor)
+                # ...of every child.
+                for successor in successors
+            ]
+        )
         # perform the value iteration update
         if abs(next_value - value) > delta: delta = abs(next_value - value)
         state_values[state] = next_value
-
 
 # play a game...
 def get_move(state):
