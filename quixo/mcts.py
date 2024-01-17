@@ -3,6 +3,7 @@ import numpy as np
 from copy import deepcopy
 import random
 import torch
+import multiprocessing
 
 
 class MctsNode:
@@ -255,14 +256,46 @@ class MctsPlayer(Player):
             winner = MctsPlayer.rollout(current_node.get_board(), current_node.turn)
 
         MctsPlayer.backpropagation(current_node, winner, node_stats)
+        return node_stats
+
+    @staticmethod
+    def many_simulations(num, root, node_stats, policy=None):
+        """It runs num simulations. Just a shell for the process pool"""
+        for _ in range(num):
+            MctsPlayer.simulation(root, node_stats, policy=policy)
+        return node_stats
+
+    @staticmethod
+    def merge_node_stats(node_stats, ns):
+        for s in ns.keys():
+            if s not in node_stats.keys():
+                node_stats[s] = [0, 0]
+            node_stats[s][0] += ns[s][0]
+            node_stats[s][1] += ns[s][1]
+        return node_stats
 
     def make_move(self, game: Game) -> tuple[tuple[int, int], Move]:
         board = game.get_board()
         state = MctsNode(board, game.get_current_player())
         node_stats = {state: [0, 0]}
 
-        for _ in range(60):
-            MctsPlayer.simulation(state, node_stats, policy=self.policy)
+        pool = multiprocessing.Pool()
+        works = []
+        for _ in range(8):
+            works.append(
+                pool.apply_async(
+                    MctsPlayer.many_simulations,
+                    (100, state, deepcopy(node_stats), self.policy),
+                )
+            )
+        for i in range(32):
+            ns = works[i % 8].get()
+            MctsPlayer.merge_node_stats(node_stats, ns)
+            if i < 24:
+                works[i % 8] = pool.apply_async(
+                    MctsPlayer.many_simulations,
+                    (10, state, deepcopy(node_stats), self.policy),
+                )
 
         children_boards, actions = MctsPlayer.obtain_possible_actions(
             board, game.get_current_player()
