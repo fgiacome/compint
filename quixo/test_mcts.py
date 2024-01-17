@@ -27,10 +27,14 @@ if args.opponent is not None:
 
 wins = 0
 for episode in range(args.test_episodes):
-    if args.print_board: print(f"Game #{episode+1}")
+    if args.print_board:
+        print(f"Game #{episode+1}")
     game = Game()
-    game.current_player_idx = np.random.randint(0,2)
+    game.current_player_idx = np.random.randint(0, 2)
     result = game.play(player, opponent)
-    if result == 0: wins += 1
+    if result == 0:
+        wins += 1
 
-print(f"Wins: {wins} out of {args.test_episodes} games, rate: {wins/args.test_episodes}")
+print(
+    f"Wins: {wins} out of {args.test_episodes} games, rate: {wins/args.test_episodes}"
+)
