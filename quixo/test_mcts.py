@@ -7,12 +7,18 @@ import torch
 import numpy as np
 
 parser = argparse.ArgumentParser()
+parser.add_argument("--policy", type=str)
 parser.add_argument("--opponent", type=str, default=None)
 parser.add_argument("--test_episodes", type=int, default=100)
 parser.add_argument("--print_board", action="store_true")
 args = parser.parse_args()
 
-player = MctsPlayer(print_board=args.print_board)
+policy = None
+if args.policy is not None:
+    policy = Policy()
+    policy.load_state_dict(torch.load(args.policy))
+
+player = MctsPlayer(print_board=args.print_board, policy=policy)
 opponent = RandomPlayer()
 if args.opponent is not None:
     policy = Policy()
