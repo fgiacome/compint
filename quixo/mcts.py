@@ -108,6 +108,8 @@ class MctsPlayer(Player):
         while node.parent is not None:
             if node.parent.turn == win_id:
                 node_stats[node][0] += 1
+            if node.parent.turn == (win_id+1)%2:
+                node_stats[node][0] -= 1
             node_stats[node][1] += 1
             node = node.parent
         node_stats[node][1] += 1
