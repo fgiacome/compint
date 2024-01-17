@@ -2,6 +2,7 @@ from game import Game, Player, Move
 import numpy as np
 from copy import deepcopy
 import random
+import torch
 
 class MctsNode():
     def __init__(self, board, player_id):
@@ -19,8 +20,9 @@ class MctsNode():
         return np.array(self.state, dtype=int).reshape(5,5)
 
 class MctsPlayer(Player):
-    def __init__(self, print_board=False):
+    def __init__(self, print_board=False, policy=None):
         self.print_board = print_board
+        self.policy = policy
 
     @staticmethod
     def get_cell_sides(cell):
@@ -99,16 +101,76 @@ class MctsPlayer(Player):
             node = node.parent
         node_stats[node][1] += 1
 
+    @staticmethod
+    def map_board(x: int):
+        if x//4 == 0:
+            pos = (x%4, 0)
+        elif x//4 == 1:
+            pos = (4,x%4)
+        elif x//4 == 2:
+            pos = (4-x%4,4)
+        elif x//4 == 3:
+            pos = (0,4-x%4)
+        return pos
+    
+    @staticmethod
+    def inverse_map_board(t: tuple[int, int]):
+        i = None
+        for i in range(16):
+            if MctsPlayer.map_board(i) == t:
+                break
+        return i
+    
+    @staticmethod
+    def inverse_map_move(t: Move):
+        s = None
+        if t == Move.TOP:
+            s = 0
+        elif t == Move.BOTTOM:
+            s = 1
+        elif t == Move.LEFT:
+            s = 2
+        elif t == Move.RIGHT:
+            s = 3
+        return s
+
 
     @staticmethod
-    def simulation(root: MctsNode, node_stats: None | dict[MctsNode: list[int, int]] = None):
+    def get_allowed_action_probs(y_side: torch.Tensor, y_cell: torch.Tensor, board, my_id):
+        y_side = y_side.reshape(4,1)
+        y_cell = y_cell.reshape(1,16)
+        actions = y_side @ y_cell
+        actions = actions + 1e-8
+        for i in range(16):
+            cell = MctsPlayer.map_board(i)
+            if board[cell[1],cell[0]] not in {-1, my_id}:
+                actions[:,i] = 0
+                continue
+            for side in MctsPlayer.get_cell_sides(cell):
+                actions[side,i] = 0
+        actions = actions / actions.sum()
+        return actions 
+
+    @staticmethod
+    def get_child_probs(policy, board, children, actions, my_id):
+        y_side, y_cell = policy.forward(torch.tensor(board.reshape((25,)), dtype=torch.float32))
+        action_probs = MctsPlayer.get_allowed_action_probs(y_side, y_cell, board, my_id)
+        child_probs = {}
+        for k, action in enumerate(actions):
+            i = MctsPlayer.inverse_map_board(action[0])
+            j = MctsPlayer.inverse_map_move(action[1])
+            child_probs[children[k]] = action_probs[j,i]
+        return child_probs
+
+    @staticmethod
+    def simulation(root: MctsNode, node_stats: None | dict[MctsNode: list[int, int]] = None, policy = None):
         end = False
         winner = None
         current_node = root
         if node_stats is None: node_stats[root] = [0,0]
         
         while not end:
-            children_boards, _ = MctsPlayer.obtain_possible_actions(current_node.get_board(), current_node.turn)
+            children_boards, actions = MctsPlayer.obtain_possible_actions(current_node.get_board(), current_node.turn)
             children = []
             for child_board in children_boards:
                 children.append(MctsNode(child_board, (current_node.turn+1)%2))
@@ -127,7 +189,7 @@ class MctsPlayer(Player):
                 # quit iteration and start rollout from here
                 end = True
 
-            elif not all(node_stats[child][1] > 0 for child in children):
+            elif not all(node_stats[child][1] > 0 for child in children) and policy is None:
                 # pick a random child with 0 visits
                 lonely_children = [child for child in children if node_stats[child][1] == 0]
                 child = random.choice(lonely_children)
@@ -137,7 +199,11 @@ class MctsPlayer(Player):
             else:
                 # All children have statistics. Great! Use UCB1.
                 N = sum(node_stats[child][1] for child in children)
-                child = max(children, key = lambda child: node_stats[child][0]/node_stats[child][1] + np.sqrt(2*np.log(N)/node_stats[child][1]))
+                if policy is None:
+                    child = max(children, key = lambda child: node_stats[child][0]/node_stats[child][1] + np.sqrt(2*np.log(N)/node_stats[child][1]))
+                else:
+                    policy_child_probs = MctsPlayer.get_child_probs(policy, current_node.get_board(), children, actions, current_node.turn)
+                    child = max(children, key = lambda child: (node_stats[child][0]+policy_child_probs[child])/(node_stats[child][1]+1) + np.sqrt(2*np.log(N+len(children))/(node_stats[child][1]+1)))
                 child.parent = current_node
                 current_node = child
             
@@ -151,8 +217,8 @@ class MctsPlayer(Player):
         state = MctsNode(board, game.get_current_player())
         node_stats = {state: [0,0]}
 
-        for _ in range(300):
-            MctsPlayer.simulation(state, node_stats)
+        for _ in range(60):
+            MctsPlayer.simulation(state, node_stats, policy=self.policy)
         
         children_boards, actions = MctsPlayer.obtain_possible_actions(board, game.get_current_player())
         children = [MctsNode(child_board, (game.get_current_player()+1)%2) for child_board in children_boards]
