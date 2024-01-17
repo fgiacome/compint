@@ -42,12 +42,16 @@ class NeuralPlayer(Player):
         self.eps = eps
 
     def map_board(self, x: int):
-        if x//4 % 2 == 0:
-            pos = (x%4, x//4*2)
-        else:
-            pos = (x//4*2-2, x%4)
+        if x//4 == 0:
+            pos = (x%4, 0)
+        elif x//4 == 1:
+            pos = (4,x%4)
+        elif x//4 == 2:
+            pos = (4-x%4,4)
+        elif x//4 == 3:
+            pos = (0,4-x%4)
         return pos
-    
+
     def get_cell_sides(self, cell):
         cell_sides = set()
         if cell[0] == 0: cell_sides.add(2)
