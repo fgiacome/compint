@@ -298,6 +298,8 @@ class MctsPlayer(Player):
                     MctsPlayer.many_simulations,
                     (10, state, deepcopy(node_stats), self.policy),
                 )
+        pool.close()
+        pool.join()
 
         children_boards, actions = MctsPlayer.obtain_possible_actions(
             board, game.get_current_player()
