@@ -47,19 +47,19 @@ class MctsPlayer(Player):
         if action[1] == Move.TOP:
             for i in range(action[0][1], 0, -1):
                 board[i, action[0][0]] = board[i - 1, action[0][0]]
-                board[0, action[0][0]] = my_id
+            board[0, action[0][0]] = my_id
         if action[1] == Move.LEFT:
             for i in range(action[0][0], 0, -1):
                 board[action[0][1], i] = board[action[0][1], i - 1]
-                board[action[0][1], 0] = my_id
+            board[action[0][1], 0] = my_id
         if action[1] == Move.RIGHT:
             for i in range(action[0][0], 4, 1):
                 board[action[0][1], i] = board[action[0][1], i + 1]
-                board[action[0][1], 4] = my_id
+            board[action[0][1], 4] = my_id
         if action[1] == Move.BOTTOM:
             for i in range(action[0][1], 4, 1):
                 board[i, action[0][0]] = board[i + 1, action[0][0]]
-                board[4, action[0][0]] = my_id
+            board[4, action[0][0]] = my_id
         return board
 
     @staticmethod
