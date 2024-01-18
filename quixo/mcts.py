@@ -67,14 +67,14 @@ class MctsPlayer(Player):
         """0: win 0, 1: win 1"""
         winner = -1
         for i in range(5):
-            if all(board[i, :] == board[i, 0]):
+            if board[i,0] != -1 and all(board[i, :] == board[i, 0]):
                 winner = board[i, 0]
-            if all(board[:, i] == board[0, i]):
+            if board[0,i] != -1 and all(board[:, i] == board[0, i]):
                 winner = board[0, i]
-        if all(board[i, i] == board[0, 0] for i in range(5)):
+        if board[0,0] != -1 and all(board[i, i] == board[0, 0] for i in range(5)):
             winner = board[0, 0]
-        if all(board[i, 4 - i] == board[0, 0] for i in range(5)):
-            winner = board[0, 0]
+        if board[0,4] != -1 and all(board[i, 4 - i] == board[0, 4] for i in range(5)):
+            winner = board[0, 4]
         return winner
 
     @staticmethod
