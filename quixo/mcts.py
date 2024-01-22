@@ -13,35 +13,24 @@ class MctsPlayer(Player):
     @staticmethod
     def minimax(node: MctsNode, node_table, depth=2):
         if node.get_minimax_evaluated() >= depth or node.get_minimax_value() != -1:
-            return node.get_minimax_value(), node.get_minimax_heuristic()
+            return node.get_minimax_value()
 
         board, turn = node.get_board(), node.get_turn()
         winner = utils.check_win(board, turn)
-        if winner in {1, 0}:
-            heuristic = -1.0 if winner == 1 else 1.0
-        else:
-            heuristic = utils.minimax_heuristic(board, turn)
         if winner == -1 and utils.win_possible(board, turn, depth):
             winner = (turn + 1) % 2
-            heuristic = -1.0 if turn == 0 else 1.0
             child_boards, _ = utils.get_possible_actions(board, turn)
             for child_board in child_boards:
                 child = utils.lookup_node(child_board, (turn + 1)%2, node_table)
-                value, h_value = MctsPlayer.minimax(child, node_table, depth=depth - 1)
+                value = MctsPlayer.minimax(child, node_table, depth=depth - 1)
                 if value == turn:
                     winner = turn
-                    heuristic = 1.0 if turn == 0 else -1.0
                     break
                 elif value == -1:
-                    if turn == 0 and h_value > heuristic:
-                        heuristic = h_value
-                    elif turn == 1 and h_value < heuristic:
-                        heuristic = h_value
                     winner = -1
 
         node.set_minimax_value(winner, depth)
-        node.set_minimax_heuristic(heuristic)
-        return winner, heuristic
+        return winner
 
     @staticmethod
     def rollout(board, turn):
@@ -123,11 +112,7 @@ class MctsPlayer(Player):
                         break
                 if ucb:
                     N = sum(child.get_simulations() for child in children)
-                    alpha = 0.8
-                    h_coeff = 1 if current_node.get_turn() == 0 else -1
-                    key1 = lambda c: alpha * h_coeff * c.get_minimax_heuristic() + (
-                        1 - alpha
-                    ) * (c.get_wins() / c.get_simulations())
+                    key1 = lambda c: c.get_wins() / c.get_simulations()
                     key2 = lambda c: np.sqrt(2 * np.log(N) / c.get_simulations())
                     child = max(children, key=lambda c: key1(c) * key2(c))
                 if child in traversed:

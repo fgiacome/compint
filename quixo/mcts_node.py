@@ -15,7 +15,6 @@ class MctsNode:
         self.children: list = []
         # minimax evaluation: depth and value
         self.minimax_evaluated: int = -1
-        self.minimax_heuristic: float = 0.0
         self.minimax_value: int = -1
         # simulations that have started out from this node
         self.simulations: int = 0
@@ -68,12 +67,6 @@ class MctsNode:
 
     def get_minimax_value(self):
         return self.minimax_value
-
-    def get_minimax_heuristic(self):
-        return self.minimax_heuristic
-
-    def set_minimax_heuristic(self, value):
-        self.minimax_heuristic = value
 
     def get_simulations(self):
         return self.simulations
