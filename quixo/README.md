@@ -35,3 +35,10 @@ With a bit of luck, this results in the whole row getting filled with the random
 After 30000 episodes (approximately one hour) of training, it did not seem that the network had learned any more sophisticated strategies, and it was easily beaten by the Mcts and sometimes even by the random player.
 This result, in my opinion, emphasizes that a good policy network for a modestly complex game such as this one must be much larger and trained with a lot more samples.
 It is also possible that the reason for this unsatisfactory result lies in the inherently high variance of the observations drawn with this training procedure, and that an algorithm such as Actor Critic (in any of its many forms) could be more effective.
+
+## References
+
+http://jeffbradberry.com/posts/2015/09/intro-to-monte-carlo-tree-search/
+
+Silver, D., Huang, A., Maddison, C. et al. Mastering the game of Go with deep neural networks and tree search. Nature 529, 484–489 (2016). https://doi.org/10.1038/nature16961
+
