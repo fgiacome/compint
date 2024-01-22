@@ -1,98 +1,52 @@
 from game import Game, Player, Move
+import utils
+from mcts_node import MctsNode
 import numpy as np
-from copy import deepcopy
 import random
-import torch
-import multiprocessing
-
-
-class MctsNode:
-    def __init__(self, board, player_id):
-        self.state = tuple(board.ravel())
-        self.turn = player_id
-        self.parent = None
-
-    def __hash__(self):
-        return hash((self.state, self.turn))
-
-    def __eq__(self, other):
-        return self.state == other.state and self.turn == other.turn
-
-    def get_board(self):
-        return np.array(self.state, dtype=int).reshape(5, 5)
 
 
 class MctsPlayer(Player):
-    def __init__(self, print_board=False, policy=None):
+    def __init__(self, print_board=False):
         self.print_board = print_board
-        self.policy = policy
+        self.node_table: dict[tuple[tuple[int], int], int] = {}
 
     @staticmethod
-    def get_cell_sides(cell):
-        cell_sides = set()
-        if cell[0] == 0:
-            cell_sides.add(2)
-        if cell[0] == 4:
-            cell_sides.add(3)
-        if cell[1] == 0:
-            cell_sides.add(0)
-        if cell[1] == 4:
-            cell_sides.add(1)
-        return cell_sides
+    def minimax(node: MctsNode, node_table, depth=2):
+        if node.get_minimax_evaluated() >= depth or node.get_minimax_value() != -1:
+            return node.get_minimax_value(), node.get_minimax_heuristic()
 
-    @staticmethod
-    def get_new_board(board, my_id, action):
-        """Assumes the action is valid"""
-        board = deepcopy(board)
-        if action[1] == Move.TOP:
-            for i in range(action[0][1], 0, -1):
-                board[i, action[0][0]] = board[i - 1, action[0][0]]
-            board[0, action[0][0]] = my_id
-        if action[1] == Move.LEFT:
-            for i in range(action[0][0], 0, -1):
-                board[action[0][1], i] = board[action[0][1], i - 1]
-            board[action[0][1], 0] = my_id
-        if action[1] == Move.RIGHT:
-            for i in range(action[0][0], 4, 1):
-                board[action[0][1], i] = board[action[0][1], i + 1]
-            board[action[0][1], 4] = my_id
-        if action[1] == Move.BOTTOM:
-            for i in range(action[0][1], 4, 1):
-                board[i, action[0][0]] = board[i + 1, action[0][0]]
-            board[4, action[0][0]] = my_id
-        return board
+        board, turn = node.get_board(), node.get_turn()
+        winner = utils.check_win(board, turn)
+        if winner in {1, 0}:
+            heuristic = -1.0 if winner == 1 else 1.0
+        else:
+            heuristic = utils.minimax_heuristic(board, turn)
+        if winner == -1 and utils.win_possible(board, turn, depth):
+            winner = (turn + 1) % 2
+            heuristic = -1.0 if turn == 0 else 1.0
+            child_boards, _ = utils.get_possible_actions(board, turn)
+            for child_board in child_boards:
+                child_board_ = tuple(child_board.ravel())
+                if not (child_board_, (turn + 1) % 2) in node_table.keys():
+                    child = MctsNode(child_board, (turn + 1) % 2)
+                    node_table[(child_board_, (turn + 1) % 2)] = child
+                else:
+                    child = node_table[(child_board_, (turn + 1) % 2)]
+                value, h_value = MctsPlayer.minimax(child, node_table, depth=depth - 1)
+                if value == turn:
+                    winner = turn
+                    heuristic = 1.0 if turn == 0 else -1.0
+                    break
+                elif value == -1:
+                    if turn == 0 and h_value > heuristic:
+                        heuristic = h_value
+                    elif turn == 1 and h_value < heuristic:
+                        heuristic = h_value
+                    winner = -1
 
-    @staticmethod
-    def check_win(board):
-        """0: win 0, 1: win 1"""
-        winner = -1
-        for i in range(5):
-            if board[i,0] != -1 and all(board[i, :] == board[i, 0]):
-                winner = board[i, 0]
-            if board[0,i] != -1 and all(board[:, i] == board[0, i]):
-                winner = board[0, i]
-        if board[0,0] != -1 and all(board[i, i] == board[0, 0] for i in range(5)):
-            winner = board[0, 0]
-        if board[0,4] != -1 and all(board[i, 4 - i] == board[0, 4] for i in range(5)):
-            winner = board[0, 4]
-        return winner
-
-    @staticmethod
-    def obtain_possible_actions(board, my_id):
-        actions = []
-        boards = []
-        for i in range(5):
-            for j in range(5):
-                if i in {0, 4} or j in {0, 4}:
-                    if board[j, i] in {-1, my_id}:
-                        for k in {0, 1, 2, 3} - MctsPlayer.get_cell_sides((i, j)):
-                            actions.append(((i, j), Move(k)))
-                            boards.append(
-                                MctsPlayer.get_new_board(
-                                    board, my_id, ((i, j), Move(k))
-                                )
-                            )
-        return boards, actions
+        node.set_minimax_value(winner, depth)
+        node.set_minimax_heuristic(heuristic)
+        return winner, heuristic
 
     @staticmethod
     def rollout(board, turn):
@@ -104,216 +58,145 @@ class MctsPlayer(Player):
         return game.play(player1, player2)
 
     @staticmethod
-    def backpropagation(node, win_id, node_stats):
-        while node.parent is not None:
-            if node.parent.turn == win_id:
-                node_stats[node][0] += 1
-            if node.parent.turn == (win_id+1)%2:
-                node_stats[node][0] -= 1
-            node_stats[node][1] += 1
-            node = node.parent
-        node_stats[node][1] += 1
-
-    @staticmethod
-    def map_board(x: int):
-        if x // 4 == 0:
-            pos = (x % 4, 0)
-        elif x // 4 == 1:
-            pos = (4, x % 4)
-        elif x // 4 == 2:
-            pos = (4 - x % 4, 4)
-        elif x // 4 == 3:
-            pos = (0, 4 - x % 4)
-        return pos
-
-    @staticmethod
-    def inverse_map_board(t: tuple[int, int]):
-        i = None
-        for i in range(16):
-            if MctsPlayer.map_board(i) == t:
-                break
-        return i
-
-    @staticmethod
-    def inverse_map_move(t: Move):
-        s = None
-        if t == Move.TOP:
-            s = 0
-        elif t == Move.BOTTOM:
-            s = 1
-        elif t == Move.LEFT:
-            s = 2
-        elif t == Move.RIGHT:
-            s = 3
-        return s
-
-    @staticmethod
-    def get_allowed_action_probs(
-        y_side: torch.Tensor, y_cell: torch.Tensor, board, my_id
-    ):
-        y_side = y_side.reshape(4, 1)
-        y_cell = y_cell.reshape(1, 16)
-        actions = y_side @ y_cell
-        actions = actions + 1e-8
-        for i in range(16):
-            cell = MctsPlayer.map_board(i)
-            if board[cell[1], cell[0]] not in {-1, my_id}:
-                actions[:, i] = 0
-                continue
-            for side in MctsPlayer.get_cell_sides(cell):
-                actions[side, i] = 0
-        actions = actions / actions.sum()
-        return actions
-
-    @staticmethod
-    def get_child_probs(policy, board, children, actions, my_id):
-        y_side, y_cell = policy.forward(
-            torch.tensor(board.reshape((25,)), dtype=torch.float32)
-        )
-        action_probs = MctsPlayer.get_allowed_action_probs(y_side, y_cell, board, my_id)
-        child_probs = {}
-        for k, action in enumerate(actions):
-            i = MctsPlayer.inverse_map_board(action[0])
-            j = MctsPlayer.inverse_map_move(action[1])
-            child_probs[children[k]] = action_probs[j, i]
-        return child_probs
+    def backpropagation(node: MctsNode, win_id: int):
+        node.add_simulations()
+        parent = node.get_parent()
+        while parent is not None:
+            if parent.get_turn() == win_id:
+                node.add_wins()
+            if parent.get_turn() == (win_id + 1) % 2:
+                node.add_wins(wins=-1)
+            node = parent
+            node.add_simulations()
+            parent = node.get_parent()
+        if node.get_turn() == win_id:
+            node.add_wins(wins=-1)
+        if node.get_turn() == (win_id + 1) % 2:
+            node.add_wins()
 
     @staticmethod
     def simulation(
         root: MctsNode,
-        node_stats: None | dict[MctsNode : list[int, int]] = None,
-        policy=None,
+        node_table: dict[np.ndarray : MctsNode],
     ):
+        """IMPORTANT: this function assumes root node has been visited.
+        This is because the "actions" of the children must be initialized and
+        I want this to be dealt with outside this function, which does not
+        initialize actions but only execute simulations."""
+
         end = False
-        winner = None
+        winner = -1
         current_node = root
-        if node_stats is None:
-            node_stats[root] = [0, 0]
+        player = root.get_turn()
+        traversed = [root]
 
         while not end:
-            children_boards, actions = MctsPlayer.obtain_possible_actions(
-                current_node.get_board(), current_node.turn
-            )
-            children = []
-            for child_board in children_boards:
-                children.append(MctsNode(child_board, (current_node.turn + 1) % 2))
-
-            if len(children) == 0:
-                # terminal node
-                winner = MctsNode.check_win(current_node.get_board())
+            # if node has not been visited, visit it and run the simulation
+            if not current_node.get_visited():
+                board, turn = current_node.get_board(), current_node.get_turn()
+                child_boards, _ = utils.get_possible_actions(board, turn)
+                children = []
+                for child_board in child_boards:
+                    child_board_ = tuple(child_board.ravel())
+                    if (child_board_, (turn + 1) % 2) not in node_table.keys():
+                        child = MctsNode(child_board, (turn + 1) % 2)
+                        node_table[(child_board_, (turn + 1) % 2)] = child
+                    else:
+                        child = node_table[(child_board_, (turn + 1) % 2)]
+                    if child not in children:
+                        children.append(child)
+                current_node.set_visited(children)
                 end = True
-
-            elif node_stats[current_node][1] == 0:
-                # leaf node
-                # initilize all children (if not already present)
-                for child in children:
-                    if child not in node_stats.keys():
-                        node_stats[child] = [0, 0]
-                # quit iteration and start rollout from here
-                end = True
-
+            # else, check if we can end the traversal here (ie the node is terminal)
             elif (
-                not all(node_stats[child][1] > 0 for child in children)
-                and policy is None
+                current_node.get_number_of_children() == 0
+                or current_node.get_minimax_value() != -1
             ):
-                # pick a random child with 0 visits
-                lonely_children = [
-                    child for child in children if node_stats[child][1] == 0
-                ]
-                child = random.choice(lonely_children)
-                child.parent = current_node
-                current_node = child
-
+                end = True
+            # else, the node has been visited and it is time to ROLLOUT!
             else:
-                # All children have statistics. Great! Use UCB1.
-                N = sum(node_stats[child][1] for child in children)
-                if policy is None:
-                    child = max(
-                        children,
-                        key=lambda child: node_stats[child][0] / node_stats[child][1]
-                        + np.sqrt(2 * np.log(N) / node_stats[child][1]),
-                    )
+                children = current_node.get_children()
+                # inform MCTS: discard children that surely lead to losing
+                good_children = [
+                    child
+                    for child in children
+                    if child.get_minimax_value() != (player + 1) % 2
+                ]
+                # ...if there any good ones at all
+                good_children = children if len(good_children) == 0 else good_children
+                children = good_children
+                ucb = True
+                for child in children:
+                    if child.get_simulations() == 0:
+                        ucb = False
+                        end = True
+                        break
+                if ucb:
+                    N = sum(child.get_simulations() for child in children)
+                    alpha = 0.8
+                    h_coeff = 1 if current_node.get_turn() == 0 else -1
+                    key1 = lambda c: alpha * h_coeff * c.get_minimax_heuristic() + (
+                        1 - alpha
+                    ) * (c.get_wins() / c.get_simulations())
+                    key2 = lambda c: np.sqrt(2 * np.log(N) / c.get_simulations())
+                    child = max(children, key=lambda c: key1(c) * key2(c))
+                if child in traversed:
+                    # loop detected
+                    end = True
                 else:
-                    policy_child_probs = MctsPlayer.get_child_probs(
-                        policy,
-                        current_node.get_board(),
-                        children,
-                        actions,
-                        current_node.turn,
-                    )
-                    child = max(
-                        children,
-                        key=lambda child: (
-                            node_stats[child][0] + policy_child_probs[child]
-                        )
-                        / (node_stats[child][1] + 1)
-                        + np.sqrt(
-                            2 * np.log(N + len(children)) / (node_stats[child][1] + 1)
-                        ),
-                    )
-                child.parent = current_node
-                current_node = child
+                    child.set_parent(current_node)
+                    current_node = child
+                    traversed.append(current_node)
 
-        if winner is None:
+        winner = current_node.get_minimax_value()
+        if winner == -1:
             winner = MctsPlayer.rollout(current_node.get_board(), current_node.turn)
 
-        MctsPlayer.backpropagation(current_node, winner, node_stats)
-        return node_stats
-
-    @staticmethod
-    def many_simulations(num, root, node_stats, policy=None):
-        """It runs num simulations. Just a shell for the process pool"""
-        for _ in range(num):
-            MctsPlayer.simulation(root, node_stats, policy=policy)
-        return node_stats
-
-    @staticmethod
-    def merge_node_stats(node_stats, ns):
-        for s in ns.keys():
-            if s not in node_stats.keys():
-                node_stats[s] = [0, 0]
-            node_stats[s][0] += ns[s][0]
-            node_stats[s][1] += ns[s][1]
-        return node_stats
+        MctsPlayer.backpropagation(current_node, winner)
 
     def make_move(self, game: Game) -> tuple[tuple[int, int], Move]:
         board = game.get_board()
-        state = MctsNode(board, game.get_current_player())
-        node_stats = {state: [0, 0]}
+        board_ = tuple(board.ravel())
+        turn = game.get_current_player()
+        if (board_, turn) not in self.node_table.keys():
+            root = MctsNode(board, turn)
+        else:
+            root = self.node_table[(board_, turn)]
 
-        pool = multiprocessing.Pool()
-        works = []
-        for _ in range(8):
-            works.append(
-                pool.apply_async(
-                    MctsPlayer.many_simulations,
-                    (100, state, deepcopy(node_stats), self.policy),
-                )
-            )
-        for i in range(32):
-            ns = works[i % 8].get()
-            MctsPlayer.merge_node_stats(node_stats, ns)
-            if i < 24:
-                works[i % 8] = pool.apply_async(
-                    MctsPlayer.many_simulations,
-                    (10, state, deepcopy(node_stats), self.policy),
-                )
-        pool.close()
-        pool.join()
+        # visit root
+        # this should be done even if root had been visited before,
+        # so that I can initalize the actions
+        board, turn = root.get_board(), root.get_turn()
+        child_boards, actions = utils.get_possible_actions(board, turn)
+        children = []
+        for i, child_board in enumerate(child_boards):
+            child_board_ = tuple(child_board.ravel())
+            if (child_board_, (turn + 1) % 2) not in self.node_table.keys():
+                child = MctsNode(child_board, (turn + 1) % 2)
+                self.node_table[(child_board_, (turn + 1) % 2)] = child
+            else:
+                child = self.node_table[(child_board_, (turn + 1) % 2)]
+            if child not in children:
+                children.append(child)
+            child.set_action(actions[i])
+        root.set_visited(children)
+        MctsPlayer.minimax(root, self.node_table, depth=4)
+        root.set_parent(None)
 
-        children_boards, actions = MctsPlayer.obtain_possible_actions(
-            board, game.get_current_player()
-        )
-        children = [
-            MctsNode(child_board, (game.get_current_player() + 1) % 2)
-            for child_board in children_boards
-        ]
-        cell, side = actions[
-            max(
-                (i for i in range(len(children))),
-                key=lambda i: node_stats[children[i]][1],
-            )
-        ]
+        cell, side = None, None
+        for child in children:
+            if child.get_minimax_value() == turn:
+                cell, side = child.get_action()
+                break
+
+        if cell is None:
+            for _ in range(300):
+                MctsPlayer.simulation(root, self.node_table)
+
+            cell, side = max(
+                root.get_children(), key=lambda c: c.get_simulations()
+            ).get_action()
+
         if self.print_board:
             print(board)
             print(f"Mcts Player going for {cell}, {side}.")
@@ -327,9 +210,7 @@ class RandomPlayer(Player):
 
     def make_move(self, game: "Game") -> tuple[tuple[int, int], Move]:
         board = game.get_board()
-        _, actions = MctsPlayer.obtain_possible_actions(
-            board, game.get_current_player()
-        )
+        _, actions = utils.get_possible_actions(board, game.get_current_player())
         cell, side = random.choice(actions)
         if self.print_board:
             print(board)

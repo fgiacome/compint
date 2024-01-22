@@ -3,6 +3,7 @@ from agent import NeuralPlayer, Policy
 from mcts import MctsPlayer
 from game import Game
 from main import RandomPlayer
+from minmax import MinMaxPlayer
 import torch
 import numpy as np
 
@@ -18,7 +19,7 @@ if args.policy is not None:
     policy = Policy()
     policy.load_state_dict(torch.load(args.policy))
 
-player = MctsPlayer(print_board=args.print_board, policy=policy)
+player = MctsPlayer(print_board=args.print_board)
 opponent = RandomPlayer()
 if args.opponent is not None:
     policy = Policy()
@@ -32,6 +33,7 @@ for episode in range(args.test_episodes):
     game = Game()
     game.current_player_idx = np.random.randint(0, 2)
     result = game.play(player, opponent)
+    game.print()
     if result == 0:
         wins += 1
 
