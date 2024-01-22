@@ -123,6 +123,7 @@ class MctsPlayer(Player):
                     current_node = child
                     traversed.append(current_node)
 
+        MctsPlayer.minimax(current_node, node_table, depth=0)
         winner = current_node.get_minimax_value()
         if winner == -1:
             winner = MctsPlayer.rollout(current_node.get_board(), current_node.turn)
