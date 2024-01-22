@@ -1,6 +1,7 @@
 from copy import deepcopy
 from game import Move
 import numpy as np
+from mcts_node import MctsNode
 
 
 def get_cell_sides(cell):
@@ -104,43 +105,6 @@ def inverse_map_move(t: Move):
         s = 3
     return s
 
-
-def check_win_board(board, turn, depth=2):
-    """0: win 0, 1: win 1"""
-    winner = -1
-    for i in range(5):
-        if board[i, 0] != -1 and all(board[i, :] == board[i, 0]):
-            winner = board[i, 0]
-        if board[0, i] != -1 and all(board[:, i] == board[0, i]):
-            winner = board[0, i]
-    if board[0, 0] != -1 and all(board[i, i] == board[0, 0] for i in range(5)):
-        winner = board[0, 0]
-    if board[0, 4] != -1 and all(board[i, 4 - i] == board[0, 4] for i in range(5)):
-        winner = board[0, 4]
-    if (
-        winner == -1
-        and depth > 0
-        and (
-            5 - how_many_in_line(board, turn) <= depth
-            or 5 - how_many_in_line(board, (turn + 1) % 2) <= depth
-        )
-    ):
-        boards, _ = get_possible_actions(board, turn)
-        winners = []
-        for board_ in boards:
-            winner_ = check_win_board(board_, (turn + 1) % 2, depth=depth - 1)
-            winners.append(winner_)
-            if turn == winner_:
-                break
-        if turn in winners:
-            winner = turn
-        elif -1 in winners:
-            winner = -1
-        else:
-            winner = (turn + 1) % 2
-    return winner
-
-
 def check_win(board, turn):
     """0: win 0, 1: win 1"""
     winner = -1
@@ -165,3 +129,18 @@ def win_possible(board, turn, depth):
 
 def minimax_heuristic(board, turn):
     return (how_many_in_line(board, 0) - how_many_in_line(board, 1)) / 5
+
+
+def lookup_node(board: np.ndarray, turn: int, node_table: dict, create=True):
+    """Looks up a node in the node_table, if it doesn't exists and create is True,
+    it creates it."""
+    board_ = tuple(board.ravel())
+    if (board_, turn) not in node_table.keys():
+        if create:
+            node = MctsNode(board, turn)
+            node_table[(board_, turn)] = node
+        else:
+            node = None
+    else:
+        node = node_table[(board_, turn)]
+    return node

@@ -26,12 +26,7 @@ class MctsPlayer(Player):
             heuristic = -1.0 if turn == 0 else 1.0
             child_boards, _ = utils.get_possible_actions(board, turn)
             for child_board in child_boards:
-                child_board_ = tuple(child_board.ravel())
-                if not (child_board_, (turn + 1) % 2) in node_table.keys():
-                    child = MctsNode(child_board, (turn + 1) % 2)
-                    node_table[(child_board_, (turn + 1) % 2)] = child
-                else:
-                    child = node_table[(child_board_, (turn + 1) % 2)]
+                child = utils.lookup_node(child_board, (turn + 1)%2, node_table)
                 value, h_value = MctsPlayer.minimax(child, node_table, depth=depth - 1)
                 if value == turn:
                     winner = turn
@@ -97,12 +92,7 @@ class MctsPlayer(Player):
                 child_boards, _ = utils.get_possible_actions(board, turn)
                 children = []
                 for child_board in child_boards:
-                    child_board_ = tuple(child_board.ravel())
-                    if (child_board_, (turn + 1) % 2) not in node_table.keys():
-                        child = MctsNode(child_board, (turn + 1) % 2)
-                        node_table[(child_board_, (turn + 1) % 2)] = child
-                    else:
-                        child = node_table[(child_board_, (turn + 1) % 2)]
+                    child = utils.lookup_node(child_board, (turn+1)%2, node_table)
                     if child not in children:
                         children.append(child)
                 current_node.set_visited(children)
@@ -170,12 +160,7 @@ class MctsPlayer(Player):
         child_boards, actions = utils.get_possible_actions(board, turn)
         children = []
         for i, child_board in enumerate(child_boards):
-            child_board_ = tuple(child_board.ravel())
-            if (child_board_, (turn + 1) % 2) not in self.node_table.keys():
-                child = MctsNode(child_board, (turn + 1) % 2)
-                self.node_table[(child_board_, (turn + 1) % 2)] = child
-            else:
-                child = self.node_table[(child_board_, (turn + 1) % 2)]
+            child = utils.lookup_node(child_board, (turn+1)%2, self.node_table)
             if child not in children:
                 children.append(child)
             child.set_action(actions[i])
