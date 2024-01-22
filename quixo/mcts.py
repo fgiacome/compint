@@ -8,7 +8,7 @@ import random
 class MctsPlayer(Player):
     def __init__(self, print_board=False):
         self.print_board = print_board
-        self.node_table: dict[tuple[tuple[int], int], int] = {}
+        self.node_table: dict[tuple[tuple[int], int], MctsNode] = {}
 
     @staticmethod
     def minimax(node: MctsNode, node_table, depth=2):
