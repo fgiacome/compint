@@ -28,7 +28,7 @@ class MctsNode:
         return self.board == other.board and self.turn == other.turn
 
     def get_board(self):
-        return np.array(self.board, dtype=int).reshape(5, 5)
+        return np.array(self.board, dtype=np.int8).reshape(5, 5)
 
     def get_turn(self):
         return self.turn

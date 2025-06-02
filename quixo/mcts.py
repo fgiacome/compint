@@ -3,6 +3,7 @@ import utils
 from mcts_node import MctsNode
 import numpy as np
 import random
+from quixo import parallel_simulation
 
 
 class MctsPlayer(Player):
@@ -42,21 +43,21 @@ class MctsPlayer(Player):
         return game.play(player1, player2)
 
     @staticmethod
-    def backpropagation(node: MctsNode, win_id: int):
-        node.add_simulations()
+    def backpropagation(node: MctsNode, win_0: int, win_1: int):
+        node.add_simulations(simulations=win_0 + win_1)
         parent = node.get_parent()
         while parent is not None:
-            if parent.get_turn() == win_id:
-                node.add_wins()
-            if parent.get_turn() == (win_id + 1) % 2:
-                node.add_wins(wins=-1)
+            if parent.get_turn() == 0:
+                node.add_wins(win_0 - win_1)
+            if parent.get_turn() == 1:
+                node.add_wins(win_1 - win_0)
             node = parent
             node.add_simulations()
             parent = node.get_parent()
-        if node.get_turn() == win_id:
-            node.add_wins(wins=-1)
-        if node.get_turn() == (win_id + 1) % 2:
-            node.add_wins()
+        if node.get_turn() == 0:
+            node.add_wins(win_0 - win_1)
+        if node.get_turn() == 1:
+            node.add_wins(win_1 - win_0)
 
     @staticmethod
     def simulation(
@@ -123,12 +124,15 @@ class MctsPlayer(Player):
                     current_node = child
                     traversed.append(current_node)
 
-        MctsPlayer.minimax(current_node, node_table, depth=0)
+        MctsPlayer.minimax(current_node, node_table, depth=-1)
         winner = current_node.get_minimax_value()
         if winner == -1:
-            winner = MctsPlayer.rollout(current_node.get_board(), current_node.turn)
+            (win_0, win_1, _, _) = parallel_simulation(current_node.get_board(), current_node.turn, 1000)
+        else:
+            win_0 = 1 if winner == 0 else 0
+            win_1 = 1 if winner == 1 else 0
 
-        MctsPlayer.backpropagation(current_node, winner)
+        MctsPlayer.backpropagation(current_node, win_0, win_1)
 
     def make_move(self, game: Game) -> tuple[tuple[int, int], Move]:
         board = game.get_board()
@@ -151,7 +155,7 @@ class MctsPlayer(Player):
                 children.append(child)
             child.set_action(actions[i])
         root.set_visited(children)
-        MctsPlayer.minimax(root, self.node_table, depth=4)
+        MctsPlayer.minimax(root, self.node_table, depth=-1)
         root.set_parent(None)
 
         cell, side = None, None
@@ -161,7 +165,7 @@ class MctsPlayer(Player):
                 break
 
         if cell is None:
-            for _ in range(300):
+            for _ in range(100):
                 MctsPlayer.simulation(root, self.node_table)
 
             cell, side = max(
