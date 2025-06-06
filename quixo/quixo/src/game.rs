@@ -7,6 +7,15 @@ pub enum Player{
     O
 }
 
+impl Player {
+    pub fn next(&self) -> Player {
+        match self {
+            Player::X => Player::O,
+            Player::O => Player::X,
+        }
+    }
+}
+
 impl Display for Player {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -53,7 +62,7 @@ pub struct Move {
     pub shift: Shift
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 /// Error type for game-related errors.
 pub enum GameError {
     InvalidMove,
@@ -80,6 +89,9 @@ impl Display for Move {
 impl Move {
     pub fn apply(&self, p: Player, b: &Board) -> Result<Board> {
         let (x, y) = (self.x as usize, self.y as usize);
+        if !(x == 0 || x == 4 || y == 0 ||  y == 4) {
+            return Err(GameError::InvalidMove) // Invalid move
+        }
         if !match b[y][x] {
             Some(player) if player == p => true, // Valid move if the position is occupied by the player
             None => true, // Valid move if the position is empty
@@ -130,7 +142,7 @@ impl Move {
     }
 }
 
-pub const ALLOWED_MOVES: [Move; 80] = [
+pub const ALLOWED_MOVES: [Move; 44] = [
     Move { x: 0, y: 0, shift: Shift::BOTTOM },
     Move { x: 0, y: 0, shift: Shift::RIGHT },
     Move { x: 0, y: 1, shift: Shift::TOP },
@@ -147,54 +159,54 @@ pub const ALLOWED_MOVES: [Move; 80] = [
     Move { x: 1, y: 0, shift: Shift::BOTTOM},
     Move { x: 1, y: 0, shift: Shift::LEFT },
     Move { x: 1, y: 0, shift: Shift::RIGHT },
-    Move { x: 1, y: 1, shift: Shift::TOP },
-    Move { x: 1, y: 1, shift: Shift::BOTTOM },
-    Move { x: 1, y: 1, shift: Shift::LEFT },
-    Move { x: 1, y: 1, shift: Shift::RIGHT },
-    Move { x: 1, y: 2, shift: Shift::TOP },
-    Move { x: 1, y: 2, shift: Shift::BOTTOM },
-    Move { x: 1, y: 2, shift: Shift::LEFT },
-    Move { x: 1, y: 2, shift: Shift::RIGHT },
-    Move { x: 1, y: 3, shift: Shift::TOP },
-    Move { x: 1, y: 3, shift: Shift::BOTTOM },
-    Move { x: 1, y: 3, shift: Shift::LEFT },
-    Move { x: 1, y: 3, shift: Shift::RIGHT },
+    // Move { x: 1, y: 1, shift: Shift::TOP },
+    // Move { x: 1, y: 1, shift: Shift::BOTTOM },
+    // Move { x: 1, y: 1, shift: Shift::LEFT },
+    // Move { x: 1, y: 1, shift: Shift::RIGHT },
+    // Move { x: 1, y: 2, shift: Shift::TOP },
+    // Move { x: 1, y: 2, shift: Shift::BOTTOM },
+    // Move { x: 1, y: 2, shift: Shift::LEFT },
+    // Move { x: 1, y: 2, shift: Shift::RIGHT },
+    // Move { x: 1, y: 3, shift: Shift::TOP },
+    // Move { x: 1, y: 3, shift: Shift::BOTTOM },
+    // Move { x: 1, y: 3, shift: Shift::LEFT },
+    // Move { x: 1, y: 3, shift: Shift::RIGHT },
     Move { x: 1, y: 4, shift: Shift::TOP },
     Move { x: 1, y: 4, shift: Shift::LEFT },
     Move { x: 1, y: 4, shift: Shift::RIGHT },
     Move { x: 2, y: 0, shift: Shift::BOTTOM },
     Move { x: 2, y: 0, shift: Shift::LEFT },
     Move { x: 2, y: 0, shift: Shift::RIGHT },
-    Move { x: 2, y: 1, shift: Shift::TOP },
-    Move { x: 2, y: 1, shift: Shift::BOTTOM },
-    Move { x: 2, y: 1, shift: Shift::LEFT },
-    Move { x: 2, y: 1, shift: Shift::RIGHT },
-    Move { x: 2, y: 2, shift: Shift::TOP },
-    Move { x: 2, y: 2, shift: Shift::BOTTOM },
-    Move { x: 2, y: 2, shift: Shift::LEFT },
-    Move { x: 2, y: 2, shift: Shift::RIGHT },
-    Move { x: 2, y: 3, shift: Shift::TOP },
-    Move { x: 2, y: 3, shift: Shift::BOTTOM },
-    Move { x: 2, y: 3, shift: Shift::LEFT },
-    Move { x: 2, y: 3, shift: Shift::RIGHT },
+    // Move { x: 2, y: 1, shift: Shift::TOP },
+    // Move { x: 2, y: 1, shift: Shift::BOTTOM },
+    // Move { x: 2, y: 1, shift: Shift::LEFT },
+    // Move { x: 2, y: 1, shift: Shift::RIGHT },
+    // Move { x: 2, y: 2, shift: Shift::TOP },
+    // Move { x: 2, y: 2, shift: Shift::BOTTOM },
+    // Move { x: 2, y: 2, shift: Shift::LEFT },
+    // Move { x: 2, y: 2, shift: Shift::RIGHT },
+    // Move { x: 2, y: 3, shift: Shift::TOP },
+    // Move { x: 2, y: 3, shift: Shift::BOTTOM },
+    // Move { x: 2, y: 3, shift: Shift::LEFT },
+    // Move { x: 2, y: 3, shift: Shift::RIGHT },
     Move { x: 2, y: 4, shift: Shift::TOP },
     Move { x: 2, y: 4, shift: Shift::LEFT },
     Move { x: 2, y: 4, shift: Shift::RIGHT },
     Move { x: 3, y: 0, shift: Shift::BOTTOM },
     Move { x: 3, y: 0, shift: Shift::LEFT },
     Move { x: 3, y: 0, shift: Shift::RIGHT },
-    Move { x: 3, y: 1, shift: Shift::TOP },
-    Move { x: 3, y: 1, shift: Shift::BOTTOM },
-    Move { x: 3, y: 1, shift: Shift::LEFT },
-    Move { x: 3, y: 1, shift: Shift::RIGHT },
-    Move { x: 3, y: 2, shift: Shift::TOP },
-    Move { x: 3, y: 2, shift: Shift::BOTTOM },
-    Move { x: 3, y: 2, shift: Shift::LEFT },
-    Move { x: 3, y: 2, shift: Shift::RIGHT },
-    Move { x: 3, y: 3, shift: Shift::TOP },
-    Move { x: 3, y: 3, shift: Shift::BOTTOM },
-    Move { x: 3, y: 3, shift: Shift::LEFT }, 
-    Move { x: 3, y: 3, shift: Shift::RIGHT },
+    // Move { x: 3, y: 1, shift: Shift::TOP },
+    // Move { x: 3, y: 1, shift: Shift::BOTTOM },
+    // Move { x: 3, y: 1, shift: Shift::LEFT },
+    // Move { x: 3, y: 1, shift: Shift::RIGHT },
+    // Move { x: 3, y: 2, shift: Shift::TOP },
+    // Move { x: 3, y: 2, shift: Shift::BOTTOM },
+    // Move { x: 3, y: 2, shift: Shift::LEFT },
+    // Move { x: 3, y: 2, shift: Shift::RIGHT },
+    // Move { x: 3, y: 3, shift: Shift::TOP },
+    // Move { x: 3, y: 3, shift: Shift::BOTTOM },
+    // Move { x: 3, y: 3, shift: Shift::LEFT }, 
+    // Move { x: 3, y: 3, shift: Shift::RIGHT },
     Move { x: 3, y: 4, shift: Shift::TOP },
     Move { x: 3, y: 4, shift: Shift::LEFT },
     Move { x: 3, y: 4, shift: Shift::RIGHT },
@@ -213,9 +225,8 @@ pub const ALLOWED_MOVES: [Move; 80] = [
     Move { x: 4, y: 4, shift: Shift::LEFT }
 ];
 
-/// Generate a random move for player p on the board b.
-pub fn random_move(b: &Board, p: Player) -> Result<Move> {
-    let mut rng = rand::rng();
+#[inline]
+pub fn find_available_moves(b: &Board, p: Player) -> ([Move; 80], usize) {
     let mut available_moves: [Move;80] = [Move { x: 0, y: 0, shift: Shift::TOP }; 80];
     let mut num_available_moves = 0;
     for mv in ALLOWED_MOVES.into_iter() {
@@ -224,6 +235,13 @@ pub fn random_move(b: &Board, p: Player) -> Result<Move> {
             num_available_moves += 1;
         }
     }
+    (available_moves, num_available_moves)
+}
+
+/// Generate a random move for player p on the board b.
+pub fn random_move(b: &Board, p: Player) -> Result<Move> {
+    let mut rng = rand::rng();
+    let (available_moves, num_available_moves) = find_available_moves(b, p);
     if num_available_moves == 0 {
         return Err(GameError::NoValidMoves); // No valid moves available
     }
@@ -303,6 +321,21 @@ pub fn winner(b: &Board) -> Option<Player> {
 mod tests {
     use super::*;
 
+    const B: Board = [
+        [Some(Player::X), Some(Player::X), Some(Player::X), None, None],
+        [Some(Player::O), Some(Player::X), None, None, None],
+        [None, Some(Player::X), None, None, None],
+        [Some(Player::O), Some(Player::X), None, None, None],
+        [Some(Player::X), None, Some(Player::O), None, None],
+    ];
+    const B_WON: Board = [
+        [Some(Player::X), Some(Player::X), Some(Player::X), None, None],
+        [Some(Player::O), Some(Player::X), None, None, None],
+        [None, Some(Player::X), None, None, None],
+        [Some(Player::O), Some(Player::X), None, None, None],
+        [Some(Player::X), Some(Player::X), Some(Player::O), None, None],
+    ];
+
     #[test]
     fn test_random_game() {
         let board: Board = [[None; 5]; 5];
@@ -328,4 +361,14 @@ mod tests {
         board[4][4] = Some(Player::O);
         assert_eq!(winner(&board), Some(Player::O));
     }
+
+    #[test]
+    fn test_move_x_almost_won() {
+        let b = B;
+        let b_new = B_WON;
+        let p = Player::X;
+        let m = Move {x: 1, y: 4, shift: Shift::LEFT};
+        assert_eq!(m.apply(p, &b), Ok(b_new));
+    }
+
 }
