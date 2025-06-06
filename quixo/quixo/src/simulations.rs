@@ -3,18 +3,18 @@ use crate::game::{Board, Player, random_game};
 use pyo3::prelude::*;
 use numpy::{PyReadonlyArray2, PyUntypedArrayMethods};
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Result {
-    pub wins_x: i32,
-    pub wins_o: i32,
-    pub draws: i32,
-    pub total: i32,
+    pub wins_x: u32,
+    pub wins_o: u32,
+    pub draws: u32,
+    pub total: u32,
 }
 
-pub fn parallel_simulation(b: Board, p: Player, n: i32) -> Result {
+pub fn parallel_simulation(b: Board, p: Player, n: u32) -> Result {
     let (wins_x, wins_o, draws) =    (0..n).into_par_iter()
         .map(|_| random_game(b, p))
-        .fold(|| (0,0,0), |(wins_x, wins_o, draws), game| {
+        .fold(|| (0 as u32,0 as u32, 0 as u32), |(wins_x, wins_o, draws), game| {
             match game {
                 Some(Player::X) => (wins_x + 1, wins_o, draws),
                 Some(Player::O) => (wins_x, wins_o + 1, draws),
@@ -34,7 +34,7 @@ pub fn parallel_simulation(b: Board, p: Player, n: i32) -> Result {
 }
 
 #[pyfunction(name="parallel_simulation")]
-pub fn parallel_simulation_py(board: PyReadonlyArray2<i8>, player: i32, n: i32) -> PyResult<(i32, i32, i32, i32)> {
+pub fn parallel_simulation_py(board: PyReadonlyArray2<i8>, player: i32, n: u32) -> PyResult<(u32, u32, u32, u32)> {
     let dims = board.shape();
     if dims != [5, 5] {
         return Err(pyo3::exceptions::PyValueError::new_err("Expected array of shape (5,5)"));
@@ -77,10 +77,8 @@ mod tests {
         let n = 100000;
         let result = parallel_simulation(b, p, n);
         
-        assert!(result.wins_x >= 0);
-        assert!(result.wins_o >= 0);
-        assert!(result.draws >= 0);
         assert_eq!(result.total, n);
+        assert_eq!(result.wins_x + result.wins_o + result.draws, n);
         println!("{:#?}", result);
     }
 
@@ -97,10 +95,8 @@ mod tests {
         let n = 100000;
         let result = parallel_simulation(b, p, n);
         
-        assert!(result.wins_x >= 0);
-        assert!(result.wins_o >= 0);
-        assert!(result.draws >= 0);
         assert_eq!(result.total, n);
+        assert_eq!(result.wins_x + result.wins_o + result.draws, n);
         println!("{:#?}", result);
     }
 }
